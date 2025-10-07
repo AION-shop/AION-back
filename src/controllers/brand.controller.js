@@ -44,6 +44,7 @@ const updateBrand = async (req, res) => {
       { new: true, runValidators: true }
     );
 
+    //alksndlkasndlkasndlkasndlk
     if (!brand) return res.status(404).json({ message: 'Brand not found' });
 
     return res.status(200).json({ message: 'Brand updated successfully', brand });
