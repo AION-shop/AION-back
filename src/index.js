@@ -1,76 +1,71 @@
-// .env ni ENG BOSHIDA yuklang (va yo'lni aniq ko'rsating)
-const path = require("path");
-require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
-
+// src/index.js
 const express = require("express");
-const morgan = require("morgan");
 const cors = require("cors");
-const { dbConnection } = require("./config/db");
-const userRouter = require("./routes/user.routes");
-const productRouter = require("./routes/product.routes");
-const categoryRouter = require("./routes/category.routes");
-const brandRoutes = require('./routes/brand.routes');
+const dotenv = require("dotenv");
+const dbConnection = require("./config/db");
+
+// 🔹 Routerlar
+const authRoutes = require("./routes/authRoutes");
+const forgotRoutes = require("./routes/forgotRoutes");
+
+// 🔹 .env yuklash
+dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 8000;
 
-// Tez diagnostika (istasaiz keyin olib tashlang)
-console.log("[DEBUG] cwd=", process.cwd());
-console.log("[DEBUG] __dirname=", __dirname);
-console.log("[DEBUG] has MONGODB_CNN?", !!process.env.MONGODB_CNN);
-
-// CORS
-const corsOptions = {
-  origin: [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "https://one063development.onrender.com",
-    "https://ecommerce-client-1063.onrender.com",
-  ],
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-};
-
-// middlewares
-app.use(morgan("dev"));
-app.use(cors(corsOptions));
+// 🔹 Middleware
+app.use(
+  cors({
+    origin: "*", // Agar frontend domeni ma’lum bo‘lsa, shuni yozish mumkin
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  })
+);
 app.use(express.json());
 
-// Health
-app.get("/health", (req, res) => {
-  res.json({
-    status: "OK",
-    timestamp: new Date().toISOString(),
-    port: process.env.PORT,
-    env: process.env.NODE_ENV,
-  });
-});
-
-// routes
-app.use("/api/v1/auth", userRouter);
-// app.use("/api/v1/products", productRouter);
-app.use("/api/v1/categories", categoryRouter);
-app.use('/api/brands', brandRoutes);
-
-
-// error handler
-app.use((err, req, res, next) => {
-  console.error("Server Error:", err);
-  res.status(500).json({
-    message: "Server error",
-    error: process.env.NODE_ENV === "development" ? err.message : "Internal server error",
-  });
-});
-
-// === MUHIM: Serverni DB dan keyin ishga tushiring ===
+// 🔹 MongoDB ulanishi
 (async () => {
-  await dbConnection(); // 1) avval DB
+  try {
+    await dbConnection();
+    console.log("✅ MongoDB muvaffaqiyatli ulandi");
+  } catch (err) {
+    console.error("❌ MongoDB ulanish xatosi:", err.message);
+    process.exit(1); // Xatolik bo‘lsa, serverni to‘xtatadi
+  }
+})();
 
-  app.listen(PORT, () => {
-    console.log(`🚀 Server on port ${PORT}`);
-    console.log(`📡 CORS enabled for production and development`);
+// 🔹 Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/forgot", forgotRoutes);
+
+// 🔹 Test route (server holatini tekshirish uchun)
+app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "✅ Server ishlayapti va MongoDB ulangan!",
+    time: new Date().toLocaleString("uz-UZ"),
   });
-})().catch((e) => {
-  console.error("❌ Fatal startup error:", e);
-  process.exit(1);
+});
+
+// 🔹 Not Found (404) middleware
+app.use((req, res, next) => {
+  res.status(404).json({
+    success: false,
+    message: "❌ Bunday sahifa topilmadi!",
+  });
+});
+
+// 🔹 Global error handler
+app.use((err, req, res, next) => {
+  console.error("❌ Server xatosi:", err);
+  res.status(500).json({
+    success: false,
+    message: "Serverda ichki xatolik yuz berdi!",
+  });
+});
+
+// 🔹 Serverni ishga tushirish
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server ${PORT}-portda ishlayapti...`);
 });
