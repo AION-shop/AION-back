@@ -11,7 +11,6 @@ const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: false });
 // Kodlar saqlash xotirasi (5 daqiqa amal qiladi)
 let codes = {}; // { telegram: { code: '123456', expires: timestamp } }
 
-// 🔹 Register
 exports.register = async (req, res) => {
   try {
     const { telegram, password, chatId } = req.body;
@@ -118,3 +117,16 @@ exports.verifyCode = async (req, res) => {
     res.json({ success: false, message: "Server xatosi!" });
   }
 };
+
+
+// 🔹 Get All Users
+exports.getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find({}, { password: 0 }); // parolni ko‘rsatmaymiz
+    res.json({ success: true, users });
+  } catch (error) {
+    console.error("❌ getAllUsers error:", error);
+    res.json({ success: false, message: "Foydalanuvchilarni olishda xatolik!" });
+  }
+};
+

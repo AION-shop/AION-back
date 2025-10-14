@@ -7,6 +7,7 @@ const dbConnection = require("./config/db");
 // 🔹 Routerlar
 const authRoutes = require("./routes/authRoutes");
 const forgotRoutes = require("./routes/forgotRoutes");
+const productRoutes = require("./routes/product.routes");
 
 // 🔹 .env yuklash
 dotenv.config();
@@ -16,7 +17,7 @@ const app = express();
 // 🔹 Middleware
 app.use(
   cors({
-    origin: "*", // Agar frontend domeni ma’lum bo‘lsa, shuni yozish mumkin
+    origin: "*", // Frontend domenini qo‘yish mumkin
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   })
@@ -30,15 +31,16 @@ app.use(express.json());
     console.log("✅ MongoDB muvaffaqiyatli ulandi");
   } catch (err) {
     console.error("❌ MongoDB ulanish xatosi:", err.message);
-    process.exit(1); // Xatolik bo‘lsa, serverni to‘xtatadi
+    process.exit(1);
   }
 })();
 
 // 🔹 Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/forgot", forgotRoutes);
+app.use("/api/products", productRoutes);
 
-// 🔹 Test route (server holatini tekshirish uchun)
+// 🔹 Test route (server ishlashini tekshirish)
 app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
@@ -47,7 +49,7 @@ app.get("/", (req, res) => {
   });
 });
 
-// 🔹 Not Found (404) middleware
+// 🔹 404 Not Found
 app.use((req, res, next) => {
   res.status(404).json({
     success: false,
