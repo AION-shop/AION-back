@@ -8,12 +8,13 @@ dotenv.config();
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: false });
 
-// Kodlar saqlash xotirasi (5 daqiqa amal qiladi)
-let codes = {}; // { telegram: { code: '123456', expires: timestamp } }
+// Kodlar saqlanadigan vaqtinchalik xotira
+let codes = {};
 
+// 🔹 Register
 exports.register = async (req, res) => {
   try {
-    const { telegram, password, chatId } = req.body;
+    const { telegram, password, chatId, role } = req.body;
     if (!telegram || !password || !chatId)
       return res.json({ success: false, message: "Barcha maydonlar to‘ldirilishi kerak!" });
 
@@ -21,18 +22,26 @@ exports.register = async (req, res) => {
     if (existing)
       return res.json({ success: false, message: "Bu username allaqachon mavjud!" });
 
+    // 🧠 Admin allaqachon mavjud bo‘lsa, yangi admin yaratilmaydi
+    if (role === "admin") {
+      const adminExists = await User.findOne({ role: "admin" });
+      if (adminExists) {
+        return res.json({ success: false, message: "Admin allaqachon mavjud!" });
+      }
+    }
+
     const hashed = await bcrypt.hash(password, 10);
-    const user = new User({ telegram, password: hashed, chatId });
+    const user = new User({ telegram, password: hashed, chatId, role: role || "client" });
     await user.save();
 
-    // Telegramga xabar yuborish
+    // Telegramga xabar
     await bot.sendMessage(
       chatId,
-      `✅ Ro‘yxatdan o‘tish muvaffaqiyatli!\n👤 Username: ${telegram}`,
+      `✅ ${role === "admin" ? "Admin" : "Foydalanuvchi"} sifatida ro‘yxatdan o‘tdingiz!\n👤 Username: ${telegram}`,
       { parse_mode: "HTML" }
     );
 
-    res.json({ success: true, message: "Ro‘yxatdan o‘tish muvaffaqiyatli!" });
+    res.json({ success: true, message: "Ro‘yxatdan o‘tish muvaffaqiyatli!", role: user.role });
   } catch (error) {
     console.error("❌ register error:", error);
     res.json({ success: false, message: "Server xatosi!" });
@@ -52,12 +61,21 @@ exports.login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.json({ success: false, message: "Parol noto‘g‘ri!" });
 
-    if (!process.env.JWT_SECRET)
-      return res.json({ success: false, message: "Server sozlamasi noto‘g‘ri (JWT_SECRET yo‘q)!" });
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
-
-    res.json({ success: true, message: "Kirish muvaffaqiyatli!", token, user: { telegram: user.telegram } });
+    res.json({
+      success: true,
+      message: "Kirish muvaffaqiyatli!",
+      token,
+      user: {
+        telegram: user.telegram,
+        role: user.role,
+      },
+    });
   } catch (error) {
     console.error("❌ login error:", error);
     res.json({ success: false, message: "Server xatosi!" });
@@ -74,12 +92,12 @@ exports.sendCode = async (req, res) => {
     if (!user) return res.json({ success: false, message: "Bunday foydalanuvchi topilmadi!" });
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expires = Date.now() + 5 * 60 * 1000; // 5 daqiqa amal qiladi
+    const expires = Date.now() + 5 * 60 * 1000;
     codes[telegram] = { code, expires, chatId: user.chatId };
 
-    await bot.sendMessage(user.chatId, `🔐 Sizning tasdiqlash kodingiz: ${code}\nKod 5 daqiqa ichida amal qiladi.`);
+    await bot.sendMessage(user.chatId, `🔐 Tasdiqlash kodingiz: ${code}\nKod 5 daqiqa ichida amal qiladi.`);
 
-    res.json({ success: true, message: "Kod Telegram orqali yuborildi!" });
+    res.json({ success: true, message: "Kod yuborildi!" });
   } catch (err) {
     console.error("❌ Telegram xatolik:", err.message);
     res.json({ success: false, message: "Telegram orqali yuborishda xatolik!" });
@@ -98,14 +116,12 @@ exports.verifyCode = async (req, res) => {
 
     if (Date.now() > entry.expires) {
       delete codes[telegram];
-      return res.json({ success: false, message: "Kodning amal qilish muddati tugagan!" });
+      return res.json({ success: false, message: "Kod muddati tugagan!" });
     }
 
     if (entry.code !== code) return res.json({ success: false, message: "Kod noto‘g‘ri!" });
 
-    // Kod to‘g‘ri, faqat bir martalik ishlaydi
     delete codes[telegram];
-
     const hashed = await bcrypt.hash(newPassword, 10);
     await User.findOneAndUpdate({ telegram }, { password: hashed });
 
@@ -118,15 +134,13 @@ exports.verifyCode = async (req, res) => {
   }
 };
 
-
 // 🔹 Get All Users
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({}, { password: 0 }); // parolni ko‘rsatmaymiz
+    const users = await User.find({}, { password: 0 });
     res.json({ success: true, users });
   } catch (error) {
     console.error("❌ getAllUsers error:", error);
     res.json({ success: false, message: "Foydalanuvchilarni olishda xatolik!" });
   }
 };
-
