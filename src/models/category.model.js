@@ -1,9 +1,14 @@
-// const mongoose = require("mongoose");
+const mongoose = require("mongoose");
 
-// const categorySchema = new mongoose.Schema({
-//     name: { type: String, required: true }, // notebooks
-//     image: { type: String, required: true }, // https:adopskadopkaopdkjdoi2ji03u13ui.com
-// });
+const categorySchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    model: { type: String, required: true }, // Aion Y 2024
+    icon: { type: String, required: true }, // rasm URL
+    slug: { type: String, required: true,  },
+    url: { type: String, default: "#" }
+  },
+  { timestamps: true }
+);
 
-// const Category = mongoose.model("Category", categorySchema);
-// module.exports = Category;
+module.exports = mongoose.model("Category", categorySchema);

@@ -1,22 +1,12 @@
-// const express = require("express");
-// const Category = require("../models/category.model");
-// const router = express.Router();
+const express = require("express");
+const categoryController = require("../controllers/categories.controller.js");
 
-// const {
-//   createCategory,
-//   getCategories,
-//   updateCategory,
-//   deleteCategory,
-// } = require("../controllers/categories.controller");
+const router = express.Router();
 
-// // API:
-// // CRUD - CREATE , READ, UPDATE, DELETE
+router.post("/add", categoryController.createCategory);      
+router.get("/", categoryController.getCategories);           
+router.put("/:id", categoryController.updateCategory);       
+router.delete("/:id", categoryController.deleteCategory);    
+router.delete("/delete-all", categoryController.deleteAllCategories);
 
-// router.post("/", createCategory);
-// router.get("/", getCategories);
-// router.patch("/:id", updateCategory);
-// router.delete("/:id", deleteCategory);
-
-// module.exports = router;
-
-// // http://localhost:8000/api/v1/category/3ji12o3u21893u21ioihe | PATCH | { name: "New name" }
+module.exports = router;

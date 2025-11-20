@@ -1,13 +1,14 @@
 const express = require("express");
-const { register, login, sendCode, verifyCode, getAllUsers } = require("../controllers/authController");
 const router = express.Router();
+const authController = require("../controllers/authController");
 
-router.post("/register", register);
-router.post("/login", login);
-router.post("/send-code", sendCode);
-router.post("/verify-code", verifyCode);
+// Mavjud route'lar
+router.post("/register", authController.register);
+router.post("/login", authController.login);
+router.post("/forgot/send", authController.sendCode);
+router.post("/forgot/verify", authController.verifyCode);
 
-// 🔹 Yangi qo‘shildi
-router.get("/users", getAllUsers);
+// 🔹 Adminlarni olish (GET)
+router.get("/users", authController.getAdmins); // ✅ bu funksiya bo‘lishi kerak
 
 module.exports = router;

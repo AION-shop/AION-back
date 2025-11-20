@@ -1,146 +1,147 @@
-const TelegramBot = require("node-telegram-bot-api");
-const dotenv = require("dotenv");
 const User = require("../models/User");
-const jwt = require("jsonwebtoken");
+const ResetCode = require("../models/ResetCode");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
+const nodemailer = require("nodemailer");
+require("dotenv").config();
 
-dotenv.config();
+// Nodemailer transporter
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
-const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: false });
-
-// Kodlar saqlanadigan vaqtinchalik xotira
-let codes = {};
-
-// 🔹 Register
+// ================= REGISTER =================
 exports.register = async (req, res) => {
   try {
-    const { telegram, password, chatId, role } = req.body;
-    if (!telegram || !password || !chatId)
+    let { email, nickname, password } = req.body;
+
+    if (!email || !nickname || !password)
       return res.json({ success: false, message: "Barcha maydonlar to‘ldirilishi kerak!" });
 
-    const existing = await User.findOne({ telegram });
-    if (existing)
-      return res.json({ success: false, message: "Bu username allaqachon mavjud!" });
+    email = email.trim().toLowerCase();
 
-    // 🧠 Admin allaqachon mavjud bo‘lsa, yangi admin yaratilmaydi
-    if (role === "admin") {
-      const adminExists = await User.findOne({ role: "admin" });
-      if (adminExists) {
-        return res.json({ success: false, message: "Admin allaqachon mavjud!" });
-      }
-    }
+    if (await User.findOne({ email }))
+      return res.json({ success: false, message: "Bu email allaqachon mavjud!" });
 
-    const hashed = await bcrypt.hash(password, 10);
-    const user = new User({ telegram, password: hashed, chatId, role: role || "client" });
+    const user = new User({
+      email,
+      nickname,
+      password,
+      role: "admin",
+    });
+
     await user.save();
 
-    // Telegramga xabar
-    await bot.sendMessage(
-      chatId,
-      `✅ ${role === "admin" ? "Admin" : "Foydalanuvchi"} sifatida ro‘yxatdan o‘tdingiz!\n👤 Username: ${telegram}`,
-      { parse_mode: "HTML" }
-    );
-
-    res.json({ success: true, message: "Ro‘yxatdan o‘tish muvaffaqiyatli!", role: user.role });
+    return res.json({ success: true, message: "Ro‘yxatdan o‘tish muvaffaqiyatli!", user });
   } catch (error) {
-    console.error("❌ register error:", error);
-    res.json({ success: false, message: "Server xatosi!" });
+    console.error(error);
+    return res.json({ success: false, message: "Server bilan bog‘lanishda xatolik!" });
   }
 };
 
-// 🔹 Login
+// ================= LOGIN =================
 exports.login = async (req, res) => {
   try {
-    const { telegram, password } = req.body;
-    if (!telegram || !password)
-      return res.json({ success: false, message: "Telegram va parol kiritilishi kerak!" });
+    let { email, password } = req.body;
+    if (!email || !password)
+      return res.json({ success: false, message: "Email va parol kiritilishi kerak!" });
 
-    const user = await User.findOne({ telegram });
+    email = email.trim().toLowerCase();
+    const user = await User.findOne({ email }).select("+password");
     if (!user) return res.json({ success: false, message: "Foydalanuvchi topilmadi!" });
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.json({ success: false, message: "Parol noto‘g‘ri!" });
 
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
-    res.json({
+    return res.json({
       success: true,
       message: "Kirish muvaffaqiyatli!",
+      user: { email: user.email, nickname: user.nickname, role: user.role },
       token,
-      user: {
-        telegram: user.telegram,
-        role: user.role,
-      },
     });
   } catch (error) {
-    console.error("❌ login error:", error);
-    res.json({ success: false, message: "Server xatosi!" });
+    console.error(error);
+    return res.json({ success: false, message: "Server xatosi!" });
   }
 };
 
-// 🔹 Send Code (Forgot Password)
+// ================= GET ADMIN USERS =================
+exports.getAdmins = async (req, res) => {
+  try {
+    const admins = await User.find({ role: "admin" });
+    res.json({ success: true, users: admins });
+  } catch (error) {
+    console.error("❌ getAdmins error:", error);
+    res.status(500).json({ success: false, message: "Server xatosi!" });
+  }
+};
+
+// ================= SEND FORGOT PASSWORD CODE =================
 exports.sendCode = async (req, res) => {
   try {
-    const { telegram } = req.body;
-    if (!telegram) return res.json({ success: false, message: "Telegram username kiritilmadi!" });
+    const { email } = req.body;
+    if (!email) return res.json({ success: false, message: "Email kiritilmadi!" });
 
-    const user = await User.findOne({ telegram });
-    if (!user) return res.json({ success: false, message: "Bunday foydalanuvchi topilmadi!" });
+    const user = await User.findOne({ email });
+    if (!user) return res.json({ success: false, message: "Foydalanuvchi topilmadi!" });
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expires = Date.now() + 5 * 60 * 1000;
-    codes[telegram] = { code, expires, chatId: user.chatId };
+    const codeHash = crypto.createHash("sha256").update(code).digest("hex");
 
-    await bot.sendMessage(user.chatId, `🔐 Tasdiqlash kodingiz: ${code}\nKod 5 daqiqa ichida amal qiladi.`);
+    await ResetCode.create({
+      email,
+      codeHash,
+      plainCode: code,
+      used: false,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+    });
 
-    res.json({ success: true, message: "Kod yuborildi!" });
-  } catch (err) {
-    console.error("❌ Telegram xatolik:", err.message);
-    res.json({ success: false, message: "Telegram orqali yuborishda xatolik!" });
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Parol tiklash kodi",
+      html: `<p>🔐 Sizning parol tiklash kodingiz: <b>${code}</b></p>
+             <p>Bu kod 10 daqiqa ichida amal qiladi.</p>`,
+    });
+
+    return res.json({ success: true, message: "Kod email orqali yuborildi ✅" });
+  } catch (error) {
+    console.error(error);
+    return res.json({ success: false, message: "Server xatosi!" });
   }
 };
 
-// 🔹 Verify Code (Forgot Password)
+// ================= VERIFY CODE & RESET PASSWORD =================
 exports.verifyCode = async (req, res) => {
   try {
-    const { telegram, code, newPassword } = req.body;
-    if (!telegram || !code || !newPassword)
+    const { email, code, newPassword } = req.body;
+    if (!email || !code || !newPassword)
       return res.json({ success: false, message: "Barcha maydonlar to‘ldirilishi kerak!" });
 
-    const entry = codes[telegram];
+    const entry = await ResetCode.findOne({ email, used: false });
     if (!entry) return res.json({ success: false, message: "Avval kod yuboring!" });
 
-    if (Date.now() > entry.expires) {
-      delete codes[telegram];
-      return res.json({ success: false, message: "Kod muddati tugagan!" });
-    }
+    if (Date.now() > entry.expiresAt) return res.json({ success: false, message: "Kod muddati tugagan!" });
 
-    if (entry.code !== code) return res.json({ success: false, message: "Kod noto‘g‘ri!" });
+    const codeHash = crypto.createHash("sha256").update(code).digest("hex");
+    if (codeHash !== entry.codeHash) return res.json({ success: false, message: "Kod noto‘g‘ri!" });
 
-    delete codes[telegram];
-    const hashed = await bcrypt.hash(newPassword, 10);
-    await User.findOneAndUpdate({ telegram }, { password: hashed });
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await User.findOneAndUpdate({ email }, { password: hashedPassword });
 
-    await bot.sendMessage(entry.chatId, `✅ Parol muvaffaqiyatli yangilandi!`);
+    entry.used = true;
+    await entry.save();
 
-    res.json({ success: true, message: "Parol muvaffaqiyatli yangilandi!" });
+    return res.json({ success: true, message: "Parol muvaffaqiyatli yangilandi!" });
   } catch (error) {
-    console.error("❌ verifyCode error:", error);
-    res.json({ success: false, message: "Server xatosi!" });
-  }
-};
-
-// 🔹 Get All Users
-exports.getAllUsers = async (req, res) => {
-  try {
-    const users = await User.find({}, { password: 0 });
-    res.json({ success: true, users });
-  } catch (error) {
-    console.error("❌ getAllUsers error:", error);
-    res.json({ success: false, message: "Foydalanuvchilarni olishda xatolik!" });
+    console.error(error);
+    return res.json({ success: false, message: "Server xatosi!" });
   }
 };

@@ -1,16 +1,16 @@
 const express = require("express");
+const productController = require("../controllers/product.controller.js");
+
 const router = express.Router();
 
-// GET /api/products
-router.get("/", (req, res) => {
-  res.json({ success: true, message: "Product routes ishlayapti!" });
-});
-
-// POST /api/products/add
-router.post("/add", (req, res) => {
-  const product = req.body;
-  console.log("Yangi product:", product);
-  res.status(201).json({ success: true, message: "Product qo‘shildi!", product });
-});
+router.post("/add", productController.addProduct);
+router.get("/", productController.getAllProducts);
+router.get("/search", productController.searchProducts);
+router.get("/category/:category", productController.getProductsByCategory);
+router.get("/:id", productController.getProductById);
+router.put("/:id", productController.updateProduct);
+router.delete("/:id", productController.deleteProduct);
+router.get("/stats", productController.getProductStats);
+router.delete("/delete-all", productController.deleteAllProducts);
 
 module.exports = router;
