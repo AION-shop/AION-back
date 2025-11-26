@@ -1,7 +1,7 @@
-import ColProduct from "../models/colProductModel.js";
+const ColProduct = require("../models/colProductModel");
 
 // GET all products
-export const getAllColProducts = async (req, res) => {
+const getAllColProducts = async (req, res) => {
   try {
     const products = await ColProduct.find().sort({ createdAt: -1 });
     res.json({ success: true, products });
@@ -11,7 +11,7 @@ export const getAllColProducts = async (req, res) => {
 };
 
 // GET product by ID
-export const getColProductById = async (req, res) => {
+const getColProductById = async (req, res) => {
   const { id } = req.params;
   try {
     const product = await ColProduct.findById(id);
@@ -22,11 +22,8 @@ export const getColProductById = async (req, res) => {
   }
 };
 
-// ADD / UPDATE / DELETE shunga mos
-
-
 // GET products by category
-export const getColProductsByCategory = async (req, res) => {
+const getColProductsByCategory = async (req, res) => {
   const { category } = req.params;
   try {
     const products = await ColProduct.find({ category });
@@ -37,7 +34,7 @@ export const getColProductsByCategory = async (req, res) => {
 };
 
 // SEARCH products
-export const searchColProducts = async (req, res) => {
+const searchColProducts = async (req, res) => {
   const { q } = req.query;
   try {
     const products = await ColProduct.find({ title: { $regex: q, $options: "i" } });
@@ -48,7 +45,7 @@ export const searchColProducts = async (req, res) => {
 };
 
 // ADD new product
-export const addColProduct = async (req, res) => {
+const addColProduct = async (req, res) => {
   const { title, price, discountPercentage, category, thumbnail, images } = req.body;
   try {
     const newProduct = new ColProduct({ title, price, discountPercentage, category, thumbnail, images });
@@ -60,7 +57,7 @@ export const addColProduct = async (req, res) => {
 };
 
 // UPDATE product
-export const updateColProduct = async (req, res) => {
+const updateColProduct = async (req, res) => {
   const { id } = req.params;
   try {
     const updatedProduct = await ColProduct.findByIdAndUpdate(id, req.body, { new: true });
@@ -72,7 +69,7 @@ export const updateColProduct = async (req, res) => {
 };
 
 // DELETE product
-export const deleteColProduct = async (req, res) => {
+const deleteColProduct = async (req, res) => {
   const { id } = req.params;
   try {
     const deletedProduct = await ColProduct.findByIdAndDelete(id);
@@ -81,4 +78,14 @@ export const deleteColProduct = async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
+};
+
+module.exports = {
+  getAllColProducts,
+  getColProductById,
+  getColProductsByCategory,
+  searchColProducts,
+  addColProduct,
+  updateColProduct,
+  deleteColProduct,
 };

@@ -1,7 +1,8 @@
-import RowProduct from "../models/rowProductModel.js";
+// controllers/rowProductController.js
+const RowProduct = require("../models/rowProductModel");
 
 // GET all row products
-export const getAllRowProducts = async (req, res) => {
+const getAllRowProducts = async (req, res) => {
   try {
     const products = await RowProduct.find().sort({ createdAt: -1 });
     res.json({ success: true, products });
@@ -11,7 +12,7 @@ export const getAllRowProducts = async (req, res) => {
 };
 
 // GET row product by ID
-export const getRowProductById = async (req, res) => {
+const getRowProductById = async (req, res) => {
   const { id } = req.params;
   try {
     const product = await RowProduct.findById(id);
@@ -23,7 +24,7 @@ export const getRowProductById = async (req, res) => {
 };
 
 // GET products by category
-export const getRowProductsByCategory = async (req, res) => {
+const getRowProductsByCategory = async (req, res) => {
   const { category } = req.params;
   try {
     const products = await RowProduct.find({ category });
@@ -34,7 +35,7 @@ export const getRowProductsByCategory = async (req, res) => {
 };
 
 // SEARCH products
-export const searchRowProducts = async (req, res) => {
+const searchRowProducts = async (req, res) => {
   const { q } = req.query;
   try {
     const products = await RowProduct.find({ title: { $regex: q, $options: "i" } });
@@ -45,7 +46,7 @@ export const searchRowProducts = async (req, res) => {
 };
 
 // ADD new product
-export const addRowProduct = async (req, res) => {
+const addRowProduct = async (req, res) => {
   const { title, price, discountPercentage, category, description, thumbnail, images } = req.body;
   try {
     const newProduct = new RowProduct({ title, price, discountPercentage, category, description, thumbnail, images });
@@ -57,7 +58,7 @@ export const addRowProduct = async (req, res) => {
 };
 
 // UPDATE product
-export const updateRowProduct = async (req, res) => {
+const updateRowProduct = async (req, res) => {
   const { id } = req.params;
   try {
     const updatedProduct = await RowProduct.findByIdAndUpdate(id, req.body, { new: true });
@@ -69,7 +70,7 @@ export const updateRowProduct = async (req, res) => {
 };
 
 // DELETE product
-export const deleteRowProduct = async (req, res) => {
+const deleteRowProduct = async (req, res) => {
   const { id } = req.params;
   try {
     const deletedProduct = await RowProduct.findByIdAndDelete(id);
@@ -78,4 +79,14 @@ export const deleteRowProduct = async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
+};
+
+module.exports = {
+  getAllRowProducts,
+  getRowProductById,
+  getRowProductsByCategory,
+  searchRowProducts,
+  addRowProduct,
+  updateRowProduct,
+  deleteRowProduct
 };

@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
 const discountCardSchema = new mongoose.Schema(
   {
@@ -16,4 +16,4 @@ const discountCardSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export default mongoose.model("DiscountCard", discountCardSchema);
+module.exports = mongoose.model("DiscountCard", discountCardSchema);

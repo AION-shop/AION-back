@@ -1,12 +1,12 @@
 // routes/colProduct.js
-import express from "express";
-import {
+const express = require("express");
+const {
   getAllColProducts,
   getColProductById,
   addColProduct,
   updateColProduct,
   deleteColProduct
-} from "../controllers/colProductController.js";
+} = require("../controllers/colProductController"); // .js yozmaslik tavsiya qilinadi
 
 const router = express.Router();
 
@@ -16,4 +16,4 @@ router.post("/", addColProduct);
 router.put("/:id", updateColProduct);
 router.delete("/:id", deleteColProduct);
 
-export default router;
+module.exports = router;

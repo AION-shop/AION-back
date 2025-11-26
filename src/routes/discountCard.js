@@ -1,5 +1,9 @@
-import express from "express";
-import { createDiscountCard, getActiveProduct, deleteDiscountCard } from "../controllers/discountController.js";
+const express = require("express");
+const {
+  createDiscountCard,
+  getActiveProduct,
+  deleteDiscountCard
+} = require("../controllers/discountController");
 
 const router = express.Router();
 
@@ -10,4 +14,4 @@ router.delete("/:id", deleteDiscountCard);
 // Frontend
 router.get("/active/products", getActiveProduct);
 
-export default router;
+module.exports = router;

@@ -1,5 +1,5 @@
 const express = require("express");
-const productController = require("../controllers/product.controller.js");
+const productController = require("../controllers/product.controller");
 
 const router = express.Router();
 
@@ -12,5 +12,6 @@ router.put("/:id", productController.updateProduct);
 router.delete("/:id", productController.deleteProduct);
 router.get("/stats", productController.getProductStats);
 router.delete("/delete-all", productController.deleteAllProducts);
+router.post("/bulk-add", productController.bulkAddProducts);
 
 module.exports = router;
