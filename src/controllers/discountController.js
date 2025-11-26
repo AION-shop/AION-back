@@ -1,96 +1,53 @@
-// controllers/productController.js
-const Product = require("../models/discountCard");
+  import DiscountCard from "../models/discountCard.js";
 
-// GET all products with pagination
-const getProducts = async (req, res) => {
-  try {
-    let { limit = 12, skip = 0 } = req.query;
-    limit = parseInt(limit);
-    skip = parseInt(skip);
+  // CREATE discount card
+  export const createDiscountCard = async (req, res) => {
+    try {
+      const { title, description, product1 } = req.body;
 
-    const products = await Product.find()
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+      if (!product1?.name || !product1?.price || !product1?.originalPrice || !product1?.showProduct1Until) {
+        return res.status(400).json({ success: false, message: "Product ma'lumotlari yetarli emas" });
+      }
 
-    res.json({ success: true, products });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: "Server Error" });
-  }
-};
+      const card = await DiscountCard.create({ title, description, product1 });
+      res.status(201).json({ success: true, discountCard: card });
+    } catch (err) {
+      console.error(err);
+      res.status(400).json({ success: false, message: err.message });
+    }
+  };
 
-// GET single product by id
-const getProductById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const product = await Product.findById(id);
-    if (!product)
-      return res.status(404).json({ success: false, message: "Product not found" });
-    res.json({ success: true, product });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: "Server Error" });
-  }
-};
+  // GET active product (frontend uchun)
+  export const getActiveProduct = async (req, res) => {
+    try {
+      const card = await DiscountCard.findOne({ isActive: true }).sort({ createdAt: -1 });
+      if (!card) return res.json({ products: [] });
 
-// GET products by category
-const getProductsByCategory = async (req, res) => {
-  try {
-    const { category } = req.params;
-    const products = await Product.find({ category });
-    res.json({ success: true, products });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: "Server Error" });
-  }
-};
+      const now = new Date();
+      let products = [];
 
-// CREATE product
-const createProduct = async (req, res) => {
-  try {
-    const product = new Product(req.body);
-    await product.save();
-    res.status(201).json({ success: true, product });
-  } catch (err) {
-    console.error(err);
-    res.status(400).json({ success: false, message: "Invalid data" });
-  }
-};
+      if (new Date(card.product1.showProduct1Until) > now) {
+        const p = { ...card.product1._doc };  // original doc
+        // Chegirma foizini hisoblash
+        p.discountPercent = Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100);
+        products = [p];
+      }
 
-// UPDATE product
-const updateProduct = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const product = await Product.findByIdAndUpdate(id, req.body, { new: true });
-    if (!product)
-      return res.status(404).json({ success: false, message: "Product not found" });
-    res.json({ success: true, product });
-  } catch (err) {
-    console.error(err);
-    res.status(400).json({ success: false, message: "Invalid data" });
-  }
-};
+      res.json({ products });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  };
 
-// DELETE product
-const deleteProduct = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const product = await Product.findByIdAndDelete(id);
-    if (!product)
-      return res.status(404).json({ success: false, message: "Product not found" });
-    res.json({ success: true, message: "Product deleted" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: "Server Error" });
-  }
-};
-
-module.exports = {
-  getProducts,
-  getProductById,
-  getProductsByCategory,
-  createProduct,
-  updateProduct,
-  deleteProduct,
-};
+  // DELETE discount card
+  export const deleteDiscountCard = async (req, res) => {
+    try {
+      const deletedCard = await DiscountCard.findByIdAndDelete(req.params.id);
+      if (!deletedCard) return res.status(404).json({ success: false, message: "Not found" });
+      res.json({ success: true, message: "Deleted successfully" });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  };

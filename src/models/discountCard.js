@@ -1,18 +1,19 @@
-// models/Product.js
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
-const productSchema = new mongoose.Schema(
+const discountCardSchema = new mongoose.Schema(
   {
-    title: { type: String, required: true },
-    description: { type: String },
-    category: { type: String },
-    price: { type: Number, required: true },
-    discountPercentage: { type: Number, default: 0 },
-    thumbnail: { type: String },
-    images: [{ type: String }],
-    brand: { type: String },
+    title: { type: String, required: true, trim: true },
+    description: { type: String, default: "" },
+    product1: {
+      name: { type: String, required: true },
+      price: { type: Number, required: true },           // chegirma narxi
+      originalPrice: { type: Number, required: true },   // asl narx
+      image: { type: String, default: "" },
+      showProduct1Until: { type: Date, required: true },
+    },
+    isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Product", productSchema);
+export default mongoose.model("DiscountCard", discountCardSchema);

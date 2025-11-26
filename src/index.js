@@ -6,12 +6,16 @@ import dotenv from "dotenv";
 
 // ROUTES
 import bannerRoutes from "./routes/bannerRoutes.js";
-import discountCard from "./routes/discountCard.js"; // Discount va normal products
+
 import categoryRoutes from "./routes/category.routes.js";
 import colProductRoutes from "./routes/colProduct.js";
 import rowProductRoutes from "./routes/rowProductRoutes.js";
 import userClientRoutes from "./routes/userclientRoutes.js";
 import authRoutes from "./routes/authRoutes.js"; // Admin routes
+import discountCardRoutes from "./routes/discountCard.js";
+import Products from "./routes/product.routes.js";
+
+
 
 dotenv.config();
 
@@ -31,12 +35,14 @@ mongoose
 
 // ROUTES
 app.use("/api/banners", bannerRoutes);
-app.use("/api/products", discountCard); // GET all, by ID, by category, create/update/delete
 app.use("/api/categories", categoryRoutes);
 app.use("/api/col-products", colProductRoutes);
 app.use("/api/row-products", rowProductRoutes);
 app.use("/api/userClient", userClientRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/discount-cards", discountCardRoutes);
+app.use("/api/products", Products);
+
 
 // Health check
 app.get("/", (req, res) => res.send("Server ishlayapti ✅"));

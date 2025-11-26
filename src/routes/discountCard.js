@@ -1,16 +1,13 @@
-// routes/productRoutes.js
-const express = require("express");
+import express from "express";
+import { createDiscountCard, getActiveProduct, deleteDiscountCard } from "../controllers/discountController.js";
+
 const router = express.Router();
-const productController = require("../controllers/discountController");
 
-// Public routes
-router.get("/", productController.getProducts);
-router.get("/:id", productController.getProductById);
-router.get("/category/:category", productController.getProductsByCategory);
+// Admin
+router.post("/", createDiscountCard);
+router.delete("/:id", deleteDiscountCard);
 
-// Admin routes (CRUD) - bu yerda auth middleware qo‘shishingiz mumkin
-router.post("/", productController.createProduct);
-router.put("/:id", productController.updateProduct);
-router.delete("/:id", productController.deleteProduct);
+// Frontend
+router.get("/active/products", getActiveProduct);
 
-module.exports = router;
+export default router;
