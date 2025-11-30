@@ -13,6 +13,10 @@ const authRoutes = require("./routes/authRoutes"); // Admin / OTP routes
 const discountCardRoutes = require("./routes/discountCard");
 const Products = require("./routes/product.routes");
 const emailRoutes = require("./routes/emailRoutes"); // Nodemailer route
+const sellRoutes = require("./routes/sellRoutes");
+
+
+
 
 const app = express();
 
@@ -36,6 +40,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/discount-cards", discountCardRoutes);
 app.use("/api/products", Products);
 app.use("/api/send-email", emailRoutes);
+app.use("/api/sell", sellRoutes);
 
 // Health check
 app.get("/", (req, res) => res.send("Server ishlayapti ✅"));
