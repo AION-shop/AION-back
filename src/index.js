@@ -15,6 +15,7 @@ const emailRoutes = require("./routes/emailRoutes");
 const sellRoutes = require("./routes/sellRoutes");
 const popularCars = require("./routes/popularRoutes");
 const feedbackRoutes = require("./routes/feedbackRoutes");
+const modelsRoutes = require("./routes/modelsRoutes");
 
 const app = express();
 
@@ -37,6 +38,8 @@ app.use("/api/send-email", emailRoutes);
 app.use("/api/sell", sellRoutes);
 app.use("/api/feedbacks", feedbackRoutes);
 app.use("/api/popular", popularCars);
+app.use("/api/models", modelsRoutes);
+
 
 // Health check
 app.get("/", (req, res) => res.send("Server ishlayapti ✅"));
