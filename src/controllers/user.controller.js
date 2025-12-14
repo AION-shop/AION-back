@@ -1,4 +1,4 @@
-const UserClient = require("../models/UserClient");
+const UserClient = require("../models/userclient");
 const Otp = require("../models/Otp");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");

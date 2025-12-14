@@ -1,0 +1,13 @@
+{
+  "build": {
+    "command": "npm install && npm run build",
+    "root": "backend",
+    "environment": "production"
+  },
+  "start": {
+    "command": "npm start",
+    "root": "backend"
+  },
+  "watch": ["src", "package.json"],
+  "teardown": true
+}
