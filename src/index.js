@@ -3,20 +3,18 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 require("dotenv").config();
 
-// ROUTES
+// Routes
 const bannerRoutes = require("./routes/bannerRoutes");
-const categoryRoutes = require("./routes/category.routes");
+// const categoryRoutes = require("./routes/category.routes");
 const colProductRoutes = require("./routes/colProduct");
-const rowProductRoutes = require("./routes/rowProductRoutes");
-const userClientRoutes = require("./routes/userclientRoutes");
+// const rowProductRoutes = require("./routes/rowProductRoutes");
+const userClientRoutes = require("./routes/userClient"); // Client auth
 const authRoutes = require("./routes/authRoutes"); // Admin / OTP routes
-const discountCardRoutes = require("./routes/discountCard");
-const Products = require("./routes/product.routes");
-const emailRoutes = require("./routes/emailRoutes"); // Nodemailer route
+// const productRoutes = require("./routes/product.routes");
+const emailRoutes = require("./routes/emailRoutes");
 const sellRoutes = require("./routes/sellRoutes");
-
-
-
+const popularCars = require("./routes/popularRoutes");
+const feedbackRoutes = require("./routes/feedbackRoutes");
 
 const app = express();
 
@@ -26,34 +24,32 @@ app.use(express.json());
 
 // MongoDB ulanish
 mongoose
-.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 5000 })
-.then(() => console.log("✅ MongoDB ulandi"))
-.catch((err) => console.error("❌ MongoDB xato:", err));
+  .connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 5000 })
+  .then(() => console.log("✅ MongoDB ulandi"))
+  .catch((err) => console.error("❌ MongoDB xato:", err));
 
 // Routes
 app.use("/api/banners", bannerRoutes);
-app.use("/api/categories", categoryRoutes);
 app.use("/api/col-products", colProductRoutes);
-app.use("/api/row-products", rowProductRoutes);
-app.use("/api/userClient", userClientRoutes);
-app.use("/api/auth", authRoutes);
-app.use("/api/discount-cards", discountCardRoutes);
-app.use("/api/products", Products);
+app.use("/api/userClient", userClientRoutes); // Client login/verify
+app.use("/api/auth", authRoutes); // Admin auth / OTP
 app.use("/api/send-email", emailRoutes);
 app.use("/api/sell", sellRoutes);
+app.use("/api/feedbacks", feedbackRoutes);
+app.use("/api/popular", popularCars);
 
 // Health check
 app.get("/", (req, res) => res.send("Server ishlayapti ✅"));
 
 // 404 handler
 app.use((req, res, next) => {
-res.status(404).json({ success: false, message: "Page not found" });
+  res.status(404).json({ success: false, message: "Page not found" });
 });
 
 // Global error handler
 app.use((err, req, res, next) => {
-console.error(err.stack);
-res.status(500).json({ success: false, message: "Server error" });
+  console.error(err.stack);
+  res.status(500).json({ success: false, message: "Server error" });
 });
 
 // Server start

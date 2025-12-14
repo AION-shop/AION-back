@@ -1,122 +1,72 @@
-const UserClient = require("../models/userclient");
-const bcrypt = require("bcryptjs");
+const UserClient = require("../models/UserClient");
+const Otp = require("../models/Otp");
 const jwt = require("jsonwebtoken");
+const nodemailer = require("nodemailer");
 
-// ================= REGISTER =================
-exports.registerClient = async (req, res) => {
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+});
+
+// SEND CODE
+exports.sendCode = async (req, res) => {
   try {
-    let { telegram, chatId, firstName, lastName, password } = req.body;
+    const { email } = req.body;
+    if (!email) return res.json({ success: false, message: "Email kiritilishi kerak!" });
 
-    if (!telegram || !firstName || !lastName || !password)
-      return res.json({ success: false, message: "Barcha majburiy maydonlar to‘ldirilishi kerak!" });
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-    telegram = telegram.replace("@", "").trim();
+    await Otp.deleteMany({ email });
+    await Otp.create({ email, code, expiresAt });
 
-    if (await UserClient.findOne({ telegram }))
-      return res.json({ success: false, message: "Bu username allaqachon mavjud!" });
+    // Demo: kodni email orqali yuborish
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "ShopMarket Login Code",
+      text: `Sizning login kodingiz: ${code} (5 daqiqa ichida amal qiladi)`,
+    });
 
-    // Parolni hash qilmasdan modelga yuborish, model ichida pre-save hook bor
-    const user = new UserClient({ telegram, chatId: chatId || null, firstName, lastName, password });
-    await user.save();
+    res.json({ success: true, message: "Kod emailga yuborildi!" });
+  } catch (err) {
+    console.error(err);
+    res.json({ success: false, message: "Server xatosi!" });
+  }
+};
+
+// VERIFY CODE
+exports.verifyCode = async (req, res) => {
+  try {
+    const { email, code } = req.body;
+    if (!email || !code)
+      return res.json({ success: false, message: "Email va kod kerak!" });
+
+    const otpRecord = await Otp.findOne({ email, code });
+    if (!otpRecord)
+      return res.json({ success: false, message: "Kod noto‘g‘ri yoki topilmadi!" });
+
+    if (otpRecord.expiresAt < new Date()) {
+      await Otp.deleteOne({ _id: otpRecord._id });
+      return res.json({ success: false, message: "Kod muddati tugagan!" });
+    }
+
+    // Foydalanuvchi topiladi yoki yaratiladi
+    let user = await UserClient.findOne({ email });
+    if (!user) user = await UserClient.create({ email });
 
     // JWT token
     const token = jwt.sign(
-      { id: user._id, telegram: user.telegram, role: user.role },
+      { id: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
 
-    return res.json({
-      success: true,
-      message: "Ro‘yxatdan o‘tish muvaffaqiyatli!",
-      user: { telegram: user.telegram, firstName, lastName, chatId: user.chatId, role: user.role },
-      token,
-    });
-  } catch (error) {
-    console.error("❌ registerClient error:", error);
-    return res.json({ success: false, message: "Server xatosi!" });
-  }
-};
+    await Otp.deleteOne({ _id: otpRecord._id });
 
-// ================= LOGIN =================
-exports.loginClient = async (req, res) => {
-  try {
-    let { telegram, password } = req.body;
-    if (!telegram || !password)
-      return res.json({ success: false, message: "Telegram va parol kiritilishi kerak!" });
-
-    telegram = telegram.replace("@", "").trim();
-    const user = await UserClient.findOne({ telegram }).select("+password"); // passwordni olish
-
-    if (!user) return res.json({ success: false, message: "Foydalanuvchi topilmadi!" });
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.json({ success: false, message: "Parol noto‘g‘ri!" });
-
-    const token = jwt.sign(
-      { id: user._id, telegram: user.telegram, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    return res.json({
-      success: true,
-      message: "Kirish muvaffaqiyatli!",
-      user: { telegram: user.telegram, firstName: user.firstName, lastName: user.lastName, chatId: user.chatId, role: user.role },
-      token,
-    });
-  } catch (error) {
-    console.error("❌ loginClient error:", error);
-    return res.json({ success: false, message: "Server xatosi!" });
-  }
-};
-
-// ================= CRUD =================
-exports.getAllClients = async (req, res) => {
-  try {
-    const users = await UserClient.find({}, { password: 0 });
-    res.json({ success: true, users });
-  } catch (error) {
-    console.error(error);
-    res.json({ success: false, message: "Foydalanuvchilarni olishda xato!" });
-  }
-};
-
-exports.getClientById = async (req, res) => {
-  try {
-    const user = await UserClient.findById(req.params.id, { password: 0 });
-    if (!user) return res.json({ success: false, message: "Foydalanuvchi topilmadi!" });
-    res.json({ success: true, user });
-  } catch (error) {
-    console.error(error);
-    res.json({ success: false, message: "Server xatosi!" });
-  }
-};
-
-exports.updateClient = async (req, res) => {
-  try {
-    const { firstName, lastName, password, chatId } = req.body;
-    const updateData = { firstName, lastName, chatId };
-    if (password) {
-      const hashedPassword = await bcrypt.hash(password, 10);
-      updateData.password = hashedPassword;
-    }
-    const user = await UserClient.findByIdAndUpdate(req.params.id, updateData, { new: true });
-    if (!user) return res.json({ success: false, message: "Foydalanuvchi topilmadi!" });
-    res.json({ success: true, message: "Yangilandi!", user });
-  } catch (error) {
-    console.error(error);
-    res.json({ success: false, message: "Server xatosi!" });
-  }
-};
-
-exports.deleteClient = async (req, res) => {
-  try {
-    const user = await UserClient.findByIdAndDelete(req.params.id);
-    if (!user) return res.json({ success: false, message: "Foydalanuvchi topilmadi!" });
-    res.json({ success: true, message: "O‘chirildi!" });
-  } catch (error) {
-    console.error(error);
+    res.json({ success: true, message: "Kirish muvaffaqiyatli!", token, user });
+  } catch (err) {
+    console.error(err);
     res.json({ success: false, message: "Server xatosi!" });
   }
 };

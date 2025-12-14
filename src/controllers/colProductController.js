@@ -1,4 +1,3 @@
-// controllers/colProductController.js
 const ColProduct = require("../models/colProductModel");
 
 // GET all products
@@ -25,48 +24,8 @@ const getColProductById = async (req, res) => {
 
 // ADD single product
 const addColProduct = async (req, res) => {
-  const {
-    title,
-    price,
-    discountPercentage,
-    category,
-    description,
-    thumbnail,
-    images,
-    batteryOptions,
-    maxRange,
-    acceleration,
-    power,
-    topSpeed,
-    drivetrain,
-    chargingTime,
-    features,
-    rating,
-    reviewsCount,
-    views
-  } = req.body;
-
+  const newProduct = new ColProduct(req.body);
   try {
-    const newProduct = new ColProduct({
-      title,
-      price,
-      discountPercentage,
-      category,
-      description,
-      thumbnail,
-      images,
-      batteryOptions,
-      maxRange,
-      acceleration,
-      power,
-      topSpeed,
-      drivetrain,
-      chargingTime,
-      features,
-      rating,
-      reviewsCount,
-      views
-    });
     await newProduct.save();
     res.json({ success: true, product: newProduct });
   } catch (err) {
@@ -76,9 +35,8 @@ const addColProduct = async (req, res) => {
 
 // BULK insert products
 const bulkAddColProducts = async (req, res) => {
-  const products = req.body; // array of products
+  const products = req.body;
   if (!Array.isArray(products)) return res.status(400).json({ success: false, message: "Array required" });
-
   try {
     const insertedProducts = await ColProduct.insertMany(products);
     res.json({ success: true, products: insertedProducts });
@@ -115,9 +73,40 @@ const deleteColProduct = async (req, res) => {
 const addColProductView = async (req, res) => {
   const { id } = req.params;
   try {
-    const updatedProduct = await ColProduct.findByIdAndUpdate(id, { $inc: { views: 1 } }, { new: true });
+    const updatedProduct = await ColProduct.findByIdAndUpdate(
+      id,
+      { $inc: { views: 1 } },
+      { new: true }
+    );
     if (!updatedProduct) return res.status(404).json({ success: false, message: "Product not found" });
     res.json({ success: true, views: updatedProduct.views });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ADD rating
+const addColProductRating = async (req, res) => {
+  const { id } = req.params;
+  const { rating } = req.body; // number 1-5
+
+  if (!rating || rating < 1 || rating > 5) {
+    return res.status(400).json({ success: false, message: "Rating must be 1-5" });
+  }
+
+  try {
+    const product = await ColProduct.findById(id);
+    if (!product) return res.status(404).json({ success: false, message: "Product not found" });
+
+    const totalRating = product.rating * product.reviewsCount + rating;
+    const newReviewsCount = product.reviewsCount + 1;
+    const newRating = totalRating / newReviewsCount;
+
+    product.rating = newRating;
+    product.reviewsCount = newReviewsCount;
+
+    await product.save();
+    res.json({ success: true, rating: product.rating, reviewsCount: product.reviewsCount });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -130,5 +119,6 @@ module.exports = {
   bulkAddColProducts,
   updateColProduct,
   deleteColProduct,
-  addColProductView
+  addColProductView,
+  addColProductRating
 };
