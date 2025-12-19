@@ -16,6 +16,10 @@ const sellRoutes = require("./routes/sellRoutes");
 const popularCars = require("./routes/popularRoutes");
 const feedbackRoutes = require("./routes/feedbackRoutes");
 const modelsRoutes = require("./routes/modelsRoutes");
+const locationRoutes = require("./routes/locationRoutes");
+
+// ... остальные роуты
+
 
 const app = express();
 
@@ -39,6 +43,8 @@ app.use("/api/sell", sellRoutes);
 app.use("/api/feedbacks", feedbackRoutes);
 app.use("/api/popular", popularCars);
 app.use("/api/models", modelsRoutes);
+app.use("/api/locations", locationRoutes);
+
 
 
 // Health check
