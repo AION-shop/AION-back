@@ -1,11 +1,19 @@
 const UserClient = require("../models/userclient");
 const Otp = require("../models/Otp");
 const jwt = require("jsonwebtoken");
-const { Resend } = require("resend");
+// Resend o'rniga Nodemailer import qilamiz
+const nodemailer = require("nodemailer");
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Gmail transporter sozlamalari
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER, // Railway'dagi EMAIL_USER o'zgaruvchisi
+    pass: process.env.EMAIL_PASS, // Railway'dagi EMAIL_PASS o'zgaruvchisi
+  },
+});
 
-// SEND CODE
+// SEND CODE funktsiyasi
 exports.sendCode = async (req, res) => {
   try {
     const { email } = req.body;
@@ -18,10 +26,10 @@ exports.sendCode = async (req, res) => {
     await Otp.deleteMany({ email });
     await Otp.create({ email, code, expiresAt });
 
-    // Resend orqali email yuborish
-    await resend.emails.send({
-      from: "ShopMarket <onboarding@resend.dev>",
-      to: email,
+    // Nodemailer orqali email yuborish
+    await transporter.sendMail({
+      from: `"ShopMarket" <${process.env.EMAIL_USER}>`,
+      to: email, // Endi xohlagan emailga boradi
       subject: "ShopMarket Login Code",
       html: `
         <h2>Sizning kodingiz: ${code}</h2>
@@ -31,12 +39,12 @@ exports.sendCode = async (req, res) => {
 
     res.json({ success: true, message: "Kod emailga yuborildi!" });
   } catch (err) {
-    console.error("RESEND ERROR:", err);
+    console.error("EMAIL ERROR:", err);
     res.json({ success: false, message: "Email yuborilmadi" });
   }
 };
 
-// VERIFY CODE
+// VERIFY CODE funktsiyasi o'zgarishsiz qoldi
 exports.verifyCode = async (req, res) => {
   try {
     const { email, code } = req.body;
