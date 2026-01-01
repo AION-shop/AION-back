@@ -1,7 +1,7 @@
 const UserClient = require("../models/userclient");
 const Otp = require("../models/Otp");
 const jwt = require("jsonwebtoken");
-const transporter = require("../utils/mailer");
+const resend = require("../utils/resend"); // Resend API wrapper
 
 // ====================== SEND CODE ======================
 exports.sendCode = async (req, res) => {
@@ -19,21 +19,19 @@ exports.sendCode = async (req, res) => {
 
     // 6 xonali kod
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 min
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 daqiqa
 
     // eski kodlarni o‘chiramiz
     await Otp.deleteMany({ email });
 
     // yangi kod
-    await Otp.create({
-      email,
-      code,
-      expiresAt,
-    });
+    await Otp.create({ email, code, expiresAt });
 
     // EMAIL YUBORISH
-    await transporter.sendMail({
-      from: `"ShopMarket" <${process.env.EMAIL_USER}>`,
+    console.log("EMAIL SEND START");
+
+    await resend.emails.send({
+      from: "ShopMarket <onboarding@resend.dev>", // demo FROM email
       to: email,
       subject: "ShopMarket Login Code",
       html: `
@@ -45,6 +43,8 @@ exports.sendCode = async (req, res) => {
         </div>
       `,
     });
+
+    console.log("EMAIL SEND END");
 
     res.json({
       success: true,
@@ -122,4 +122,3 @@ exports.verifyCode = async (req, res) => {
     });
   }
 };
-
